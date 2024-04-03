@@ -15,19 +15,19 @@ impl HydrateableBase for Commodity{
         let conn = Connection::open("cxc.db").await?;
         Commodity::init(&conn).await?;
         
-        if self.exists().await.unwrap() {
+        if self.exists().await? {
             let s = self.clone();
             conn.call(move|conn|{
-                let mut stmt = conn.prepare("UPDATE commodities SET name = ?, symbol = ? WHERE id = ?").unwrap();
-                stmt.execute(params![s.name, s.symbol, s.id]).unwrap();
+                let mut stmt = conn.prepare("UPDATE commodities SET name = ?, symbol = ? WHERE id = ?")?;
+                stmt.execute(params![s.name, s.symbol, s.id])?;
                 Ok(true)
             }).await?;
         }
         else{
             let s = self.clone();
             conn.call(move|conn|{
-                let mut stmt = conn.prepare("INSERT INTO commodities (id, name, symbol) VALUES (?, ?, ?)").unwrap();
-                stmt.execute(params![s.id, s.name, s.symbol]).unwrap();
+                let mut stmt = conn.prepare("INSERT INTO commodities (id, name, symbol) VALUES (?, ?, ?)")?;
+                stmt.execute(params![s.id, s.name, s.symbol])?;
                 Ok(true)
             }).await?;
 
@@ -36,19 +36,19 @@ impl HydrateableBase for Commodity{
         Ok(true)
     }
     async fn exists(&self) -> Result<bool>{
-        let conn = Connection::open("cxc.db").await.unwrap();
+        let conn = Connection::open("cxc.db").await?;
         Commodity::init(&conn).await?;
         let s = self.clone();
         let does_exist = conn.call(move|conn|{
-            let mut stmt = conn.prepare("SELECT id FROM commodities WHERE id = ?").unwrap();
-            let mut rows = stmt.query(params![s.id]).unwrap();
+            let mut stmt = conn.prepare("SELECT id FROM commodities WHERE id = ?")?;
+            let mut rows = stmt.query(params![s.id])?;
             let mut de = false;
-            while let Some(_row) = rows.next().unwrap(){
+            while let Some(_row) = rows.next()?{
                 de = true;
                 break;
             }
             Ok(de)
-        }).await.unwrap();
+        }).await?;
         conn.close().await?;
         Ok(does_exist)
     }
@@ -61,36 +61,36 @@ impl Hydrateable<Commodity> for Commodity {
    
     
     async fn hydrate(id: i32) -> Result<Option<Commodity>>{
-        let conn = Connection::open("cxc.db").await.unwrap();
+        let conn = Connection::open("cxc.db").await?;
         Commodity::init(&conn).await?;
         let commodity = conn.call(move |conn|{
-            let mut stmt = conn.prepare("SELECT id, name, symbol FROM commodities WHERE id = ?").unwrap();
-            let mut rows = stmt.query(params![&id]).unwrap();
+            let mut stmt = conn.prepare("SELECT id, name, symbol FROM commodities WHERE id = ?")?;
+            let mut rows = stmt.query(params![&id])?;
             let mut c: Option<Commodity> = None;
-            while let Some(row) = rows.next().unwrap(){
-                c = Some(Commodity::new(row.get(0).unwrap(), row.get(1).unwrap(), row.get(2).unwrap()));
+            while let Some(row) = rows.next()?{
+                c = Some(Commodity::new(row.get(0)?, row.get(1)?, row.get(2)?));
                 break;
             }
             Ok(c)
-        }).await.unwrap();
+        }).await?;
         
-        conn.close().await.unwrap();
+        conn.close().await?;
         Ok(commodity)
     }
     
     async fn get_all() -> Result<Vec<Commodity>>{
-        let conn = Connection::open("cxc.db").await.unwrap();
+        let conn = Connection::open("cxc.db").await?;
         Commodity::init(&conn).await?;
         let cmds = conn.call(|conn|{
-            let mut stmt = conn.prepare("SELECT id, name, symbol FROM commodities").unwrap();
-            let mut rows = stmt.query([]).unwrap();
+            let mut stmt = conn.prepare("SELECT id, name, symbol FROM commodities")?;
+            let mut rows = stmt.query([])?;
             let mut commodities = Vec::new();
-            while let Some(row) = rows.next().unwrap(){
-                commodities.push(Commodity::new(row.get(0).unwrap(), row.get(1).unwrap(), row.get(2).unwrap()));
+            while let Some(row) = rows.next()?{
+                commodities.push(Commodity::new(row.get(0)?, row.get(1)?, row.get(2)?));
             }
             Ok(commodities)
-        }).await.unwrap();
-        conn.close().await.unwrap();
+        }).await?;
+        conn.close().await?;
         Ok(cmds)
     }
 }
